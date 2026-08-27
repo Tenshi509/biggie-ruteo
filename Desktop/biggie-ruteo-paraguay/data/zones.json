@@ -1,0 +1,281 @@
+[
+  {
+    "id": "ZONA-ASU-01",
+    "name": "Palma Centro",
+    "description": "Casco histórico de Asunción — Calle Palma entre 14 de Mayo y 15 de Agosto",
+    "color": "#EF4444",
+    "stores": [
+      "Biggie Palma"
+    ]
+  },
+  {
+    "id": "ZONA-ASU-02",
+    "name": "Estrella",
+    "description": "Microcentro de Asunción — Calle Estrella c/ O'Leary",
+    "color": "#DC2626",
+    "stores": [
+      "Biggie Estrella"
+    ]
+  },
+  {
+    "id": "ZONA-ASU-03",
+    "name": "Costanera Norte",
+    "description": "Costanera de Asunción — Avda. Costanera c/ Río Ypané",
+    "color": "#F97316",
+    "stores": [
+      "Biggie Costanera"
+    ]
+  },
+  {
+    "id": "ZONA-ASU-04",
+    "name": "Sajonia",
+    "description": "Barrio Sajonia — Avda. Carlos Antonio López c/ Colón",
+    "color": "#FB923C",
+    "stores": [
+      "Biggie Sajonia"
+    ]
+  },
+  {
+    "id": "ZONA-ASU-05",
+    "name": "Barrio Obrero",
+    "description": "Barrio Obrero — Avda. Acuña de Figueroa c/ Tacuary",
+    "color": "#FBBF24",
+    "stores": [
+      "Biggie Barrio Obrero"
+    ]
+  },
+  {
+    "id": "ZONA-VM-01",
+    "name": "Villa Morra",
+    "description": "Avda. Mariscal López c/ Senador Long — zona residencial premium",
+    "color": "#A3E635",
+    "stores": [
+      "Biggie Villa Morra"
+    ]
+  },
+  {
+    "id": "ZONA-VM-02",
+    "name": "Carmelitas",
+    "description": "Avda. San Martín c/ Ntra. Sra. del Carmen",
+    "color": "#34D399",
+    "stores": [
+      "Biggie Carmelitas"
+    ]
+  },
+  {
+    "id": "ZONA-VM-03",
+    "name": "Santa Teresa",
+    "description": "Avda. Santa Teresa c/ Herminio Maldonado",
+    "color": "#2DD4BF",
+    "stores": [
+      "Biggie Santa Teresa"
+    ]
+  },
+  {
+    "id": "ZONA-VM-04",
+    "name": "España & Sacramento",
+    "description": "Avda. España c/ Avda. Sacramento",
+    "color": "#38BDF8",
+    "stores": [
+      "Biggie España"
+    ]
+  },
+  {
+    "id": "ZONA-VM-05",
+    "name": "Mcal. López Asunción",
+    "description": "Avda. Mariscal López c/ Pacheco — sector Choferes del Chaco",
+    "color": "#60A5FA",
+    "stores": [
+      "Biggie Mcal. López"
+    ]
+  },
+  {
+    "id": "ZONA-VM-06",
+    "name": "Recoleta",
+    "description": "Avda. Guido Boggiani c/ R.I. 6 Boquerón",
+    "color": "#818CF8",
+    "stores": [
+      "Biggie Recoleta"
+    ]
+  },
+  {
+    "id": "ZONA-VM-07",
+    "name": "Molas López",
+    "description": "Avda. Molas López c/ Goicochea — Asunción Norte",
+    "color": "#C084FC",
+    "stores": [
+      "Biggie Molas López"
+    ]
+  },
+  {
+    "id": "ZONA-LUQ-01",
+    "name": "Luque Centro",
+    "description": "Gral. Aquino c/ Rosario — corazón de Luque",
+    "color": "#F472B6",
+    "stores": [
+      "Biggie Luque Centro"
+    ]
+  },
+  {
+    "id": "ZONA-LUQ-02",
+    "name": "Luque Conmebol",
+    "description": "Autopista Silvio Pettirossi c/ Sudamericana — zona Conmebol y Aeropuerto",
+    "color": "#FB7185",
+    "stores": [
+      "Biggie Luque Conmebol"
+    ]
+  },
+  {
+    "id": "ZONA-LUQ-03",
+    "name": "Luque San Martín",
+    "description": "Avda. Corrales c/ Las Residentas — zona sur de Luque",
+    "color": "#E879F9",
+    "stores": [
+      "Biggie Luque San Martín"
+    ]
+  },
+  {
+    "id": "ZONA-MRA-01",
+    "name": "Mariano Roque Alonso Transchaco",
+    "description": "Ruta Transchaco c/ Bernardino Caballero — entrada a la Transchaco",
+    "color": "#F59E0B",
+    "stores": [
+      "Biggie Mariano Roque Alonso"
+    ]
+  },
+  {
+    "id": "ZONA-MRA-02",
+    "name": "Mariano Shopping Km14",
+    "description": "Avda. Transchaco Km 14.5 c/ Nanawa — zona del Shopping",
+    "color": "#D97706",
+    "stores": [
+      "Biggie Mariano Shopping"
+    ]
+  },
+  {
+    "id": "ZONA-SL-01",
+    "name": "San Lorenzo Centro",
+    "description": "Julia Miranda Cueto c/ Sgto. Silva — casco urbano de San Lorenzo",
+    "color": "#10B981",
+    "stores": [
+      "Biggie San Lorenzo Centro"
+    ]
+  },
+  {
+    "id": "ZONA-SL-02",
+    "name": "San Lorenzo UNA",
+    "description": "Avda. Mcal. López c/ Campus UNA — zona universitaria",
+    "color": "#059669",
+    "stores": [
+      "Biggie UNA"
+    ]
+  },
+  {
+    "id": "ZONA-SL-03",
+    "name": "San Lorenzo Ruta 2",
+    "description": "Ruta PY02 c/ Avelino Martínez — acceso a Ruta 2 Este",
+    "color": "#047857",
+    "stores": [
+      "Biggie Ruta 2"
+    ]
+  },
+  {
+    "id": "ZONA-CAP-01",
+    "name": "Capiatá Km 16 Aratiri",
+    "description": "Ruta PY02 Km 16.5 c/ Aratiri — ingreso a Capiatá",
+    "color": "#6366F1",
+    "stores": [
+      "Biggie Capiatá Km 16"
+    ]
+  },
+  {
+    "id": "ZONA-CAP-02",
+    "name": "Capiatá Centro Km 20",
+    "description": "Ruta PY02 Km 20 c/ Cnel. López — centro de Capiatá",
+    "color": "#4F46E5",
+    "stores": [
+      "Biggie Capiatá Centro"
+    ]
+  },
+  {
+    "id": "ZONA-FDM-01",
+    "name": "Fernando de la Mora Norte",
+    "description": "Avda. Mcal. López c/ Insaurralde — zona norte de Fernando",
+    "color": "#8B5CF6",
+    "stores": [
+      "Biggie Fernando Norte"
+    ]
+  },
+  {
+    "id": "ZONA-FDM-02",
+    "name": "Fernando de la Mora Sur",
+    "description": "Avda. Defensores del Chaco c/ 11 de Setiembre — zona sur",
+    "color": "#7C3AED",
+    "stores": [
+      "Biggie Fernando Sur"
+    ]
+  },
+  {
+    "id": "ZONA-FDM-03",
+    "name": "Fernando Santa Teresa",
+    "description": "Avda. Santa Teresa c/ Dr. Mario Mazzei — límite con Asunción",
+    "color": "#6D28D9",
+    "stores": [
+      "Biggie Fernando Santa Teresa"
+    ]
+  },
+  {
+    "id": "ZONA-FDM-04",
+    "name": "Eusebio Ayala Fernando",
+    "description": "Avda. Eusebio Ayala c/ Madame Lynch — eje central de Fernando",
+    "color": "#5B21B6",
+    "stores": [
+      "Biggie Eusebio Ayala"
+    ]
+  },
+  {
+    "id": "ZONA-LAM-01",
+    "name": "Lambaré Cacique",
+    "description": "Avda. Cacique Lambaré c/ Río Apa — zona norte de Lambaré",
+    "color": "#EC4899",
+    "stores": [
+      "Biggie Lambaré"
+    ]
+  },
+  {
+    "id": "ZONA-LAM-02",
+    "name": "Lambaré Yacht",
+    "description": "Avda. Paseo del Yacht c/ Las Palmas — costanera sur de Lambaré",
+    "color": "#DB2777",
+    "stores": [
+      "Biggie Paseo del Yacht"
+    ]
+  },
+  {
+    "id": "ZONA-VEL-01",
+    "name": "Villa Elisa Centro",
+    "description": "Avda. Von Poleski c/ Colombia — centro comercial de Villa Elisa",
+    "color": "#F43F5E",
+    "stores": [
+      "Biggie Villa Elisa"
+    ]
+  },
+  {
+    "id": "ZONA-VEL-02",
+    "name": "Cuatro Mojones",
+    "description": "Avda. Defensores del Chaco c/ Acceso Sur — cruce de Cuatro Mojones",
+    "color": "#E11D48",
+    "stores": [
+      "Biggie Cuatro Mojones"
+    ]
+  },
+  {
+    "id": "ZONA-NEM-01",
+    "name": "Ñemby Acceso Sur",
+    "description": "Avda. Acceso Sur c/ Pratt Gill — entrada principal a Ñemby",
+    "color": "#BE123C",
+    "stores": [
+      "Biggie Ñemby"
+    ]
+  }
+]

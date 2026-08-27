@@ -1,0 +1,415 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biggie Paraguay - Sistema de Ruteo Inteligente Local</title>
+  
+  <!-- Estilos del Mapa Leaflet -->
+  <link rel="stylesheet" href="css/leaflet.css">
+  <!-- Estilos Principales de la Aplicación -->
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <!-- Barra Superior / Header -->
+  <header class="header-nav">
+    <div class="brand-badge">
+      <div class="logo-box">
+        <span>BIGGIE</span>
+      </div>
+      <div class="brand-title">
+        <h1>Sistema de Ruteo Inteligente</h1>
+        <p>PARAGUAY &bull; LOGÍSTICA & DISTRIBUCIÓN LOCAL</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <span class="badge-offline">
+        <span class="dot"></span> Modo Escritorio Local
+      </span>
+      <button id="btn-download-template" class="btn btn-secondary" title="Descargar plantilla oficial para Excel">
+        📥 Plantilla Excel
+      </button>
+      <button id="btn-load-demo" class="btn btn-accent" title="Cargar 12 sucursales de prueba en Asunción y Central">
+        ⚡ Cargar Demo Biggie
+      </button>
+    </div>
+  </header>
+
+  <!-- Pestañas de Navegación Principal (Sin Modo Conductor) -->
+  <div class="main-container">
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-routing">
+        🗺️ Planificación y Ruteo
+      </button>
+      <button class="tab-btn" data-tab="tab-employees">
+        👥 Gestión de Empleados y Zonas
+      </button>
+      <button class="tab-btn" data-tab="tab-stores">
+        🏪 Directorio Biggie Paraguay
+      </button>
+    </nav>
+
+    <!-- ============================================================= -->
+    <!-- PESTAÑA 1: PLANIFICACIÓN Y RUTEO INTELIGENTE -->
+    <!-- ============================================================= -->
+    <div id="tab-routing" class="tab-content active">
+      <div class="grid-2col">
+        
+        <!-- Columna Izquierda: Carga Excel y Configuración de Ruta -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">📦 Cargar Sucursales para Ruteo</h2>
+            <span id="stops-counter-badge" class="zone-tag">0 Cargadas</span>
+          </div>
+
+          <!-- Dropzone Excel -->
+          <div id="dropzone" class="excel-dropzone">
+            <div class="dropzone-icon">📊</div>
+            <div style="font-weight: 700; font-size: 0.95rem;">Arrastra tu archivo Excel aquí</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">Soporta .xlsx, .xls o .csv con columnas de sucursales o zonas</div>
+            <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display: none;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('excel-file-input').click()" style="margin-top: 0.25rem;">
+              Examinar Archivo...
+            </button>
+          </div>
+
+          <!-- Asignación Rápida por Empleados y Zonas -->
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">
+                EMPLEADOS Y TIENDAS ASIGNADAS:
+              </label>
+              <button class="btn btn-secondary" id="btn-quick-manage-zones" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">
+                ⚙️ Administrar Empleados y Zonas
+              </button>
+            </div>
+            
+            <div id="active-employees-summary" style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 140px; overflow-y: auto;">
+              <!-- Se llena dinámicamente con JS -->
+            </div>
+          </div>
+
+          <!-- Opciones de Optimización -->
+          <div style="background: var(--bg-subtle); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem;">
+<label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="chk-return-hub" checked>
+              <span>Retornar a la Matriz Biggie Sacramento</span>
+            </label>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">
+              📍 Matriz: Avda. Santísimo Sacramento c/ Roque Centurión Miranda, Asunción
+            </div>
+          </div>
+
+          <!-- Botón de Acción Principal -->
+          <button id="btn-generate-routes" class="btn btn-primary" style="padding: 0.85rem; font-size: 0.95rem;">
+            🚀 Generar y Optimizar Ruteo Automático
+          </button>
+        </div>
+
+        <!-- Columna Derecha: Mapa Interactivo y KPIs -->
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          
+          <!-- KPIs Resumen de la Operación -->
+          <div class="kpi-row">
+            <div class="kpi-card kpi-accent-red">
+              <span class="kpi-label">Paradas Totales</span>
+              <span id="kpi-stops" class="kpi-value">0</span>
+            </div>
+            <div class="kpi-card kpi-accent-blue">
+              <span class="kpi-label">Distancia Estimada</span>
+              <span id="kpi-distance" class="kpi-value">0 km</span>
+            </div>
+            <div class="kpi-card kpi-accent-green">
+              <span class="kpi-label">Tiempo Estimado</span>
+              <span id="kpi-time" class="kpi-value">0 min</span>
+            </div>
+            <div class="kpi-card kpi-accent-yellow">
+              <span class="kpi-label">Combustible Est.</span>
+              <span id="kpi-fuel" class="kpi-value">₲ 0</span>
+            </div>
+          </div>
+
+          <!-- Mapa Leaflet de Paraguay -->
+          <div class="card" style="padding: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <div style="font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                🗺️ Mapa de Rutas de Entrega en Paraguay
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="btn-fit-map" class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">
+                  🔍 Centrar Mapa
+                </button>
+              </div>
+            </div>
+            <div id="map-container"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Sección Inferior: Detalle de Rutas y Exportación -->
+      <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <h2 class="card-title">📋 Secuencia de Ruteo Paso a Paso</h2>
+            <div id="route-employee-pills" class="employee-chips">
+              <!-- Botones de filtro por empleado -->
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="btn-export-excel" class="btn btn-success" disabled>
+              📊 Exportar a Excel (.xlsx)
+            </button>
+            <button id="btn-print-route" class="btn btn-secondary">
+              🖨️ Imprimir Hoja
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="custom-table" id="table-route-details">
+            <thead>
+              <tr>
+                <th># Parada</th>
+                <th>Sucursal Biggie</th>
+                <th>Dirección y Ciudad</th>
+                <th>Zona</th>
+                <th>Chofer Asignado</th>
+                <th>Tramo (km)</th>
+                <th>Acumulado</th>
+                <th>Llegada Est.</th>
+                <th>Cajas</th>
+                <th>Nro Pedido</th>
+                <th>Contacto</th>
+              </tr>
+            </thead>
+            <tbody id="route-table-body">
+              <tr>
+                <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                  No hay rutas calculadas aún. Carga un archivo Excel o presiona "Cargar Demo Biggie" para comenzar.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- PESTAÑA 2: ADMINISTRACIÓN DE EMPLEADOS Y ZONAS -->
+    <!-- ============================================================= -->
+    <div id="tab-employees" class="tab-content" style="display: none;">
+      
+      <!-- Lista de Empleados -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">👥 Empleados / Choferes</h2>
+          <button id="btn-add-employee" class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+            ➕ Nuevo Empleado
+          </button>
+        </div>
+        <div id="employees-list-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Se llena con JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- PESTAÑA 3: DIRECTORIO DE SUCURSALES BIGGIE PARAGUAY -->
+    <!-- ============================================================= -->
+    <div id="tab-stores" class="tab-content" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🏪 Directorio de Sucursales Biggie por Zona</h2>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <input type="text" id="input-search-stores" placeholder="Buscar sucursal..." style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.45rem 0.85rem; border-radius: 6px; font-size: 0.82rem; width: 220px;">
+            <button id="btn-add-zone-from-stores" class="btn btn-accent" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+              ➕ Zona para agregar
+            </button>
+          </div>
+        </div>
+
+        <div id="stores-by-zone-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <!-- Se llena dinámicamente agrupado por zona -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: CREAR / MODIFICAR EMPLEADO -->
+  <!-- ============================================================= -->
+  <div id="modal-employee-form" class="modal-overlay">
+    <div class="modal-card">
+      <div class="card-header">
+        <h3 id="modal-employee-title" class="card-title">✏️ Modificar Empleado</h3>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-employee-form')" style="padding: 0.2rem 0.5rem;">✕</button>
+      </div>
+
+      <form id="form-employee" style="display: flex; flex-direction: column; gap: 1rem;">
+        <input type="hidden" id="emp-form-id">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Nombre y Apellido *</label>
+            <input type="text" id="emp-form-name" required placeholder="Ej: Carlos Gómez" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Teléfono / Celular</label>
+            <input type="text" id="emp-form-phone" placeholder="Ej: 0981 123 456" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Color de Ruta en Mapa</label>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="color" id="emp-form-color" value="#EF4444" style="height: 38px; width: 50px; background: none; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+              <span id="emp-form-color-hex" style="font-size: 0.8rem; color: var(--text-muted);">#EF4444</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; justify-content: center; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Estado</label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; margin-top: 0.3rem;">
+              <input type="checkbox" id="emp-form-active" checked style="width: 18px; height: 18px;">
+              <span>Activo en servicio</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Zonas asignadas del empleado -->
+        <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">
+            ZONAS ASIGNADAS EN PARAGUAY:
+          </label>
+          <div id="emp-form-zones-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; max-height: 200px; overflow-y: auto; background: var(--bg-main); padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-color);">
+            <!-- Checkboxes dinámicos de zonas -->
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-employee-form')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Guardar Empleado</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: CREAR / EDITAR ZONA PERSONALIZADA -->
+  <!-- ============================================================= -->
+  <div id="modal-zone-form" class="modal-overlay">
+    <div class="modal-card">
+      <div class="card-header">
+        <h3 id="modal-zone-title" class="card-title">📍 Agregar Nueva Zona</h3>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-zone-form')" style="padding: 0.2rem 0.5rem;">✕</button>
+      </div>
+
+      <form id="form-zone" style="display: flex; flex-direction: column; gap: 1rem;">
+        <input type="hidden" id="zone-form-id">
+
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Nombre de la Zona *</label>
+          <input type="text" id="zone-form-name" required placeholder="Ej: Itauguá, Areguá, Limpio, San Antonio..." style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Descripción / Barrios / Referencias</label>
+          <input type="text" id="zone-form-desc" placeholder="Ej: Itauguá Centro, Ruta 2, Hospital Nacional, Guazuvirá..." style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Color Identificador</label>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="color" id="zone-form-color" value="#F59E0B" style="height: 38px; width: 50px; background: none; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+            <span id="zone-form-color-hex" style="font-size: 0.8rem; color: var(--text-muted);">#F59E0B</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-zone-form')">Cancelar</button>
+          <button type="submit" class="btn btn-accent">💾 Guardar Zona</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: CREAR / EDITAR SUCURSAL BIGGIE -->
+  <!-- ============================================================= -->
+  <div id="modal-store-form" class="modal-overlay">
+    <div class="modal-card">
+      <div class="card-header">
+        <h3 id="modal-store-title" class="card-title">➕ Nueva Sucursal Biggie</h3>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-store-form')" style="padding: 0.2rem 0.5rem;">✕</button>
+      </div>
+
+      <form id="form-store" style="display: flex; flex-direction: column; gap: 1rem;">
+        <input type="hidden" id="store-form-id">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Nombre de la Sucursal *</label>
+            <input type="text" id="store-form-name" required placeholder="Ej: Biggie Palma Centro" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Zona *</label>
+            <select id="store-form-zone" required style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+              <!-- Se llena dinámicamente -->
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Dirección Completa</label>
+          <input type="text" id="store-form-address" placeholder="Ej: Avda. Palma c/ 14 de Mayo" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Ciudad</label>
+            <input type="text" id="store-form-city" placeholder="Ej: Asunción" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Teléfono</label>
+            <input type="text" id="store-form-phone" placeholder="Ej: 0981 100001" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Latitud</label>
+            <input type="number" step="any" id="store-form-lat" placeholder="Ej: -25.2818" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Longitud</label>
+            <input type="number" step="any" id="store-form-lng" placeholder="Ej: -57.6372" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-store-form')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Guardar Sucursal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts JavaScript (100% Locales) -->
+  <script src="js/leaflet.js"></script>
+  <script src="js/xlsx.full.min.js"></script>
+  <script src="js/biggie_db.js"></script>
+  <script src="js/router_engine.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
