@@ -24,17 +24,7 @@
       </div>
     </div>
 
-    <div class="header-actions">
-      <span class="badge-offline">
-        <span class="dot"></span> Modo Escritorio Local
-      </span>
-      <button id="btn-download-template" class="btn btn-secondary" title="Descargar plantilla oficial para Excel">
-        📥 Plantilla Excel
-      </button>
-      <button id="btn-load-demo" class="btn btn-accent" title="Cargar 12 sucursales de prueba en Asunción y Central">
-        ⚡ Cargar Demo Biggie
-      </button>
-    </div>
+    
   </header>
 
   <!-- Pestañas de Navegación Principal (Sin Modo Conductor) -->
@@ -70,9 +60,17 @@
             <div style="font-weight: 700; font-size: 0.95rem;">Arrastra tu archivo Excel aquí</div>
             <div style="font-size: 0.75rem; color: var(--text-secondary);">Soporta .xlsx, .xls o .csv con columnas de sucursales o zonas</div>
             <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display: none;">
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('excel-file-input').click()" style="margin-top: 0.25rem;">
-              Examinar Archivo...
-            </button>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; justify-content: center;">
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('excel-file-input').click()">
+                Examinar Archivo...
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-load-demo">
+                🧪 Cargar Demo Biggie
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-download-template">
+                📥 Descargar Plantilla
+              </button>
+            </div>
           </div>
 
           <!-- Asignación Rápida por Empleados y Zonas -->
@@ -174,20 +172,14 @@
               <tr>
                 <th># Parada</th>
                 <th>Sucursal Biggie</th>
-                <th>Dirección y Ciudad</th>
                 <th>Zona</th>
                 <th>Chofer Asignado</th>
                 <th>Tramo (km)</th>
-                <th>Acumulado</th>
-                <th>Llegada Est.</th>
-                <th>Cajas</th>
-                <th>Nro Pedido</th>
-                <th>Contacto</th>
               </tr>
             </thead>
             <tbody id="route-table-body">
               <tr>
-                <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
                   No hay rutas calculadas aún. Carga un archivo Excel o presiona "Cargar Demo Biggie" para comenzar.
                 </td>
               </tr>
@@ -226,8 +218,8 @@
           <h2 class="card-title">🏪 Directorio de Sucursales Biggie por Zona</h2>
           <div style="display:flex; gap:0.5rem; align-items:center;">
             <input type="text" id="input-search-stores" placeholder="Buscar sucursal..." style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.45rem 0.85rem; border-radius: 6px; font-size: 0.82rem; width: 220px;">
-            <button id="btn-add-zone-from-stores" class="btn btn-accent" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
-              ➕ Zona para agregar
+            <button id="btn-add-zone-from-stores" class="btn btn-primary" onclick="openCreateZoneModal()" style="padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight:700;">
+              ➕ Nueva Zona
             </button>
           </div>
         </div>
@@ -257,11 +249,6 @@
           <div style="display: flex; flex-direction: column; gap: 0.35rem;">
             <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Nombre y Apellido *</label>
             <input type="text" id="emp-form-name" required placeholder="Ej: Carlos Gómez" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Teléfono / Celular</label>
-            <input type="text" id="emp-form-phone" placeholder="Ej: 0981 123 456" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
           </div>
         </div>
 
@@ -320,11 +307,6 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Descripción / Barrios / Referencias</label>
-          <input type="text" id="zone-form-desc" placeholder="Ej: Itauguá Centro, Ruta 2, Hospital Nacional, Guazuvirá..." style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
           <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Color Identificador</label>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <input type="color" id="zone-form-color" value="#F59E0B" style="height: 38px; width: 50px; background: none; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
@@ -364,35 +346,6 @@
             <select id="store-form-zone" required style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
               <!-- Se llena dinámicamente -->
             </select>
-          </div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Dirección Completa</label>
-          <input type="text" id="store-form-address" placeholder="Ej: Avda. Palma c/ 14 de Mayo" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Ciudad</label>
-            <input type="text" id="store-form-city" placeholder="Ej: Asunción" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Teléfono</label>
-            <input type="text" id="store-form-phone" placeholder="Ej: 0981 100001" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Latitud</label>
-            <input type="number" step="any" id="store-form-lat" placeholder="Ej: -25.2818" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Longitud</label>
-            <input type="number" step="any" id="store-form-lng" placeholder="Ej: -57.6372" style="background: var(--bg-main); color: #FFF; border: 1px solid var(--border-color); padding: 0.55rem; border-radius: 6px; font-size: 0.85rem;">
           </div>
         </div>
 

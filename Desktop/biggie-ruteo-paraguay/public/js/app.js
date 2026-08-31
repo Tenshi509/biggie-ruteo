@@ -179,25 +179,52 @@ function matchLocalBiggieStore(nameQuery, addressQuery, zoneQuery, cityQuery) {
   const qZone = cleanStr(zoneQuery);
   const qCity = cleanStr(cityQuery);
 
+  // Prioridad 1: Búsqueda exacta o cercana por nombre
   for (const store of AppState.biggieStores) {
     const sName = cleanStr(store.name);
     const sAddr = cleanStr(store.address);
     const sZone = cleanStr(store.zone);
     const sCity = cleanStr(store.city);
 
-    if (qName && (sName.includes(qName) || qName.includes(sName.replace('biggie ', '')))) {
-      return store;
+    // Búsqueda por nombre (incluyendo palabras parciales)
+    if (qName && qName.length > 2) {
+      // Si el query contiene parte del nombre de la tienda
+      if (sName.includes(qName) || qName.includes(sName.replace('biggie ', '').trim())) {
+        return store;
+      }
+      // Búsqueda de palabras clave de tienda en el query
+      const storeKeywords = sName.replace('biggie', '').trim().split(/\s+/).filter(w => w.length > 2);
+      if (storeKeywords.some(kw => qName.includes(kw))) {
+        return store;
+      }
     }
-    if (qAddr && sAddr.includes(qAddr)) {
-      return store;
-    }
-    if (qZone && sZone.includes(qZone)) {
-      return store;
-    }
-    if (qCity && sCity.includes(qCity) && qZone && sZone.includes(qZone)) {
+    // Búsqueda por dirección
+    if (qAddr && qAddr.length > 3 && sAddr.includes(qAddr)) {
       return store;
     }
   }
+
+  // Prioridad 2: Búsqueda por zona
+  if (qZone && qZone.length > 2) {
+    for (const store of AppState.biggieStores) {
+      const sZone = cleanStr(store.zone);
+      if (sZone.includes(qZone) || qZone.includes(sZone)) {
+        return store;
+      }
+    }
+  }
+
+  // Prioridad 3: Búsqueda por ciudad y zona
+  if (qCity && qCity.length > 2 && qZone && qZone.length > 2) {
+    for (const store of AppState.biggieStores) {
+      const sCity = cleanStr(store.city);
+      const sZone = cleanStr(store.zone);
+      if (sCity.includes(qCity) && sZone.includes(qZone)) {
+        return store;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -219,7 +246,9 @@ function processParsedRows(rawRows, fileName = 'Archivo cargado') {
     const phoneVal = row['Telefono'] || row['Teléfono'] || row['Telefono Contacto'] || '';
     const notesVal = row['Notas'] || row['Observaciones'] || '';
 
-    const matched = matchLocalBiggieStore(nameVal, addrVal, zoneVal, cityVal);
+    // Intentar matching progresivo
+    let matched = matchLocalBiggieStore(nameVal, addrVal, zoneVal, cityVal);
+    
     if (matched) {
       nameVal = matched.name;
       if (!latVal || !lngVal || isNaN(latVal) || isNaN(lngVal)) {
@@ -229,17 +258,37 @@ function processParsedRows(rawRows, fileName = 'Archivo cargado') {
       if (!zoneVal) {
         zoneVal = matched.zone;
       }
-    } else if (zoneVal) {
-      const byZone = AppState.biggieStores.filter(s => cleanStr(s.zone) === cleanStr(zoneVal));
-      if (byZone.length > 0) {
-        const usedNames = parsedStops.map(p => p.name);
-        const available = byZone.filter(s => !usedNames.includes(s.name));
-        if (available.length > 0) {
-          nameVal = available[0].name;
-          if (!latVal || !lngVal || isNaN(latVal) || isNaN(lngVal)) {
-            latVal = available[0].lat;
-            lngVal = available[0].lng;
+    } else {
+      // Si no hay match, buscar por zona
+      if (zoneVal) {
+        const byZone = AppState.biggieStores.filter(s => cleanStr(s.zone) === cleanStr(zoneVal));
+        if (byZone.length > 0) {
+          const usedNames = parsedStops.map(p => p.name);
+          const available = byZone.filter(s => !usedNames.includes(s.name));
+          if (available.length > 0) {
+            const selectedStore = available[0];
+            nameVal = selectedStore.name;
+            if (!latVal || !lngVal || isNaN(latVal) || isNaN(lngVal)) {
+              latVal = selectedStore.lat;
+              lngVal = selectedStore.lng;
+            }
+            zoneVal = selectedStore.zone;
           }
+        }
+      } 
+      
+      // Si aún no hay nombre válido de una sucursal real, buscar en cualquier zona disponible
+      if (nameVal.includes('Sucursal Biggie') && AppState.biggieStores.length > 0) {
+        const usedNames = parsedStops.map(p => p.name);
+        const available = AppState.biggieStores.filter(s => !usedNames.includes(s.name));
+        if (available.length > 0) {
+          const selectedStore = available[0];
+          nameVal = selectedStore.name;
+          if (!latVal || !lngVal || isNaN(latVal) || isNaN(lngVal)) {
+            latVal = selectedStore.lat;
+            lngVal = selectedStore.lng;
+          }
+          zoneVal = selectedStore.zone;
         }
       }
     }
@@ -249,8 +298,8 @@ function processParsedRows(rawRows, fileName = 'Archivo cargado') {
       lngVal = -57.5800 + ((Math.random() - 0.5) * 0.08);
     }
 
-    if (!zoneVal) {
-      zoneVal = 'Asunción Centro';
+if (!zoneVal) {
+      zoneVal = 'Asunción';
     }
 
     parsedStops.push({
@@ -330,7 +379,14 @@ function renderEmployeesSummary() {
       return storeMatch || zoneMatch;
     }).length;
 
-    const totalStoresConfigured = (emp.assignedStores || []).length;
+    // Biggies por asignación directa + los pertenecientes a las zonas asignadas
+    const storesFromZones = AppState.zones
+      .filter(z => assignedZones.some(az => normalizeStr(z.name) === az))
+      .flatMap(z => z.stores || []);
+    const totalStoresConfigured = new Set([
+      ...(emp.assignedStores || []),
+      ...storesFromZones
+    ]).size;
     const totalZonesConfigured = (emp.assignedZones || []).length;
 
     const row = document.createElement('div');
@@ -498,38 +554,57 @@ function renderRouteTable(empFilterId = 'ALL') {
     tr.innerHTML = `
       <td><span class="stop-badge" style="background:${s.employeeColor || '#D90429'};">#${s.stopNumber}</span></td>
       <td><strong>${s.name}</strong></td>
-      <td>${s.address}, ${s.city}</td>
       <td><span class="zone-tag">${s.zone}</span></td>
       <td><span style="font-weight:600; color:${s.employeeColor};">${s.employeeName}</span></td>
       <td>${s.distanceFromPrevKm} km</td>
-      <td>${s.cumulativeDistanceKm} km</td>
-      <td>+${s.estimatedArrivalMin} min</td>
-      <td>${s.packages}</td>
-      <td>${s.orderNumber}</td>
-      <td>${s.phone || '-'}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
 function exportRoutesToExcel() {
-  if (!AppState.routingPlan) return;
-
-  const workbook = XLSX.utils.book_new();
-
-  AppState.routingPlan.routes.forEach(r => {
-    if (r.stops.length > 0) {
-      const rows = r.stops.map(s => ({
-        'Empleado': r.employee.name,
-        'Sucursal': s.name
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const sheetName = r.employee.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 25);
-      XLSX.utils.book_append_sheet(workbook, ws, sheetName);
+  try {
+    if (!AppState.routingPlan || !AppState.routingPlan.routes) {
+      alert('❌ No hay rutas generadas para exportar. Primero genera las rutas con "Generar y Optimizar Ruteo Automático".');
+      return;
     }
-  });
 
-  XLSX.writeFile(workbook, 'Rutas_Optimizadas_Biggie_Paraguay.xlsx');
+    if (typeof XLSX === 'undefined') {
+      alert('❌ Error: Librería XLSX no cargada. Recarga la página.');
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    // Recorrer todas las rutas y armar una fila por sucursal visitada
+    const rows = [];
+    AppState.routingPlan.routes.forEach(route => {
+      if (route.stops && route.stops.length > 0) {
+        const employee = route.employee.name || '';
+        route.stops.forEach(stop => {
+          rows.push({
+            'Empleado': employee,
+            'Sucursal': stop.name || '',
+            'Notas': stop.notes || ''
+          });
+        });
+      }
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 28 }, { wch: 30 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(workbook, ws, 'Empleado y Sucursal');
+
+    // Exportar archivo
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `Rutas_Biggie_Paraguay_${dateStr}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    
+    alert('✅ ARCHIVO EXPORTADO EXITOSAMENTE\n📁 ' + fileName + '\n\nVerifica tu carpeta de descargas.');
+  } catch (error) {
+    console.error('Error en exportación:', error);
+    alert('❌ Error al exportar: ' + (error.message || error));
+  }
 }
 
 // ==========================================================================
@@ -555,7 +630,6 @@ function renderEmployeesAdmin() {
           <div>
             <strong style="font-size:0.95rem;">${emp.name}</strong>
             ${emp.active === false ? '<span style="color:#EF4444; font-size:0.72rem; margin-left:0.3rem;">[Inactivo]</span>' : ''}
-            <div style="font-size:0.75rem; color:var(--text-secondary);">📞 ${emp.phone || 'Sin teléfono'}</div>
           </div>
         </div>
         <div style="display:flex; gap:0.35rem;">
@@ -601,60 +675,32 @@ function renderBiggieStoreCheckboxes(selectedStores = [], selectedZones = []) {
     const isZoneChecked = selectedZones.includes(zone.name);
 
     const zoneGroup = document.createElement('div');
-    zoneGroup.style.cssText = 'background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem; margin-bottom:0.6rem;';
+    zoneGroup.style.cssText = 'background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem;';
 
     const zoneHeader = document.createElement('div');
-    zoneHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:0.4rem; margin-bottom:0.45rem;';
+    zoneHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
     zoneHeader.innerHTML = `
       <label style="display:flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.85rem; cursor:pointer;">
         <input type="checkbox" class="zone-master-checkbox" data-zone="${zone.name}" ${isZoneChecked ? 'checked' : ''} style="width:16px; height:16px;">
         <span class="emp-color-bullet" style="background:${zone.color || '#FFB703'};"></span>
-        <span>${zone.name} (${zoneStores.length} Biggies)</span>
+        <span>${zone.name} <span style="font-weight:400; color:var(--text-muted); font-size:0.72rem;">(${zoneStores.length} Biggies)</span></span>
       </label>
-      <button type="button" class="btn btn-secondary" onclick="toggleAllStoresInZone('${zone.name}')" style="padding:0.15rem 0.45rem; font-size:0.68rem;">
-        Marcar / Desmarcar Todos
-      </button>
     `;
     zoneGroup.appendChild(zoneHeader);
-
-    // Lista de tiendas Biggie individuales dentro de la zona
-    const storesGrid = document.createElement('div');
-    storesGrid.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:0.4rem;';
-
-    zoneStores.forEach(storeName => {
-      const isStoreChecked = selectedStores.includes(storeName) || isZoneChecked;
-      const storeLabel = document.createElement('label');
-      storeLabel.style.cssText = 'display:flex; align-items:center; gap:0.4rem; background:rgba(0,0,0,0.2); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.76rem; cursor:pointer;';
-      storeLabel.innerHTML = `
-        <input type="checkbox" name="emp-store-checkbox" data-zone="${zone.name}" value="${storeName}" ${isStoreChecked ? 'checked' : ''} style="width:14px; height:14px;">
-        <span>🏪 ${storeName}</span>
-      `;
-      storesGrid.appendChild(storeLabel);
-    });
-
-    zoneGroup.appendChild(storesGrid);
     container.appendChild(zoneGroup);
   });
-}
 
-function toggleAllStoresInZone(zoneName) {
-  const checkboxes = document.querySelectorAll(`input[name="emp-store-checkbox"][data-zone="${zoneName}"]`);
-  const master = document.querySelector(`.zone-master-checkbox[data-zone="${zoneName}"]`);
-  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-
-  checkboxes.forEach(cb => {
-    cb.checked = !allChecked;
-  });
-  if (master) {
-    master.checked = !allChecked;
-  }
+  // Nota informativa: los Biggies se asignan automáticamente según la zona elegida
+  const note = document.createElement('div');
+  note.style.cssText = 'grid-column: 1 / -1; color:var(--text-muted); font-size:0.72rem; padding:0.4rem; background:rgba(0,0,0,0.15); border-radius:6px;';
+  note.textContent = '💡 Al elegir una zona, todas sus sucursales Biggie se asignan automáticamente al empleado.';
+  container.appendChild(note);
 }
 
 function openCreateEmployeeModal() {
   document.getElementById('modal-employee-title').textContent = '➕ Nuevo Empleado / Chofer';
   document.getElementById('emp-form-id').value = '';
   document.getElementById('emp-form-name').value = '';
-  document.getElementById('emp-form-phone').value = '';
   
   const colors = ['#EF4444', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#14B8A6'];
   const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -675,7 +721,6 @@ function openEditEmployeeModal(empId) {
   document.getElementById('modal-employee-title').textContent = `✏️ Modificar a ${emp.name}`;
   document.getElementById('emp-form-id').value = emp.id;
   document.getElementById('emp-form-name').value = emp.name;
-  document.getElementById('emp-form-phone').value = emp.phone || '';
   document.getElementById('emp-form-color').value = emp.color || '#3B82F6';
   document.getElementById('emp-form-color-hex').textContent = emp.color || '#3B82F6';
   document.getElementById('emp-form-active').checked = emp.active !== false;
@@ -691,21 +736,30 @@ async function handleSaveEmployeeForm(e) {
 
   const id = document.getElementById('emp-form-id').value;
   const name = document.getElementById('emp-form-name').value.trim();
-  const phone = document.getElementById('emp-form-phone').value.trim();
   const color = document.getElementById('emp-form-color').value;
   const active = document.getElementById('emp-form-active').checked;
 
-  // Sucursales Biggie seleccionadas
-  const checkedStoreBoxes = document.querySelectorAll('input[name="emp-store-checkbox"]:checked');
-  const assignedStores = Array.from(checkedStoreBoxes).map(cb => cb.value);
-
-  // Zonas maestras seleccionadas
+  // Zonas seleccionadas
   const checkedZoneBoxes = document.querySelectorAll('.zone-master-checkbox:checked');
   const assignedZones = Array.from(checkedZoneBoxes).map(cb => cb.getAttribute('data-zone'));
 
+  // Los Biggies se asignan automáticamente según las zonas elegidas
+  const assignedStores = [];
+  AppState.zones.forEach(zone => {
+    if (!assignedZones.includes(zone.name)) return;
+    let zoneStores = zone.stores || [];
+    if (!zoneStores || zoneStores.length === 0) {
+      zoneStores = AppState.biggieStores
+        .filter(s => normalizeStr(s.zone) === normalizeStr(zone.name))
+        .map(s => s.name);
+    }
+    zoneStores.forEach(storeName => {
+      if (!assignedStores.includes(storeName)) assignedStores.push(storeName);
+    });
+  });
+
   const payload = {
     name,
-    phone,
     color,
     active,
     assignedStores,
@@ -837,17 +891,29 @@ function renderZonesAdmin() {
 }
 
 function openCreateZoneModal() {
-  document.getElementById('modal-zone-title').textContent = '📍 Agregar Nueva Zona en Paraguay';
-  document.getElementById('zone-form-id').value = '';
-  document.getElementById('zone-form-name').value = '';
-  document.getElementById('zone-form-desc').value = '';
-  
+  const title = document.getElementById('modal-zone-title');
+  const inputId = document.getElementById('zone-form-id');
+  const inputName = document.getElementById('zone-form-name');
+  const inputDesc = document.getElementById('zone-form-desc');
+  const inputColor = document.getElementById('zone-form-color');
+  const colorHex = document.getElementById('zone-form-color-hex');
+  const modal = document.getElementById('modal-zone-form');
+
+  if (!modal) {
+    console.warn('No existe el modal de zona');
+    return;
+  }
+
+  if (title) title.textContent = '📍 Agregar Nueva Zona en Paraguay';
+  if (inputId) inputId.value = '';
+  if (inputName) inputName.value = '';
+  if (inputDesc) inputDesc.value = '';
+
   const colors = ['#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E', '#D97706'];
   const randomColor = colors[Math.floor(Math.random() * colors.length)];
-  document.getElementById('zone-form-color').value = randomColor;
-  document.getElementById('zone-form-color-hex').textContent = randomColor;
+  if (inputColor) inputColor.value = randomColor;
+  if (colorHex) colorHex.textContent = randomColor;
 
-  const modal = document.getElementById('modal-zone-form');
   modal.classList.add('open');
 }
 
@@ -855,15 +921,22 @@ function openEditZoneModal(zoneId) {
   const zone = AppState.zones.find(z => z.id === zoneId);
   if (!zone) return;
 
-  document.getElementById('modal-zone-title').textContent = `✏️ Editar Zona: ${zone.name}`;
-  document.getElementById('zone-form-id').value = zone.id;
-  document.getElementById('zone-form-name').value = zone.name;
-  document.getElementById('zone-form-desc').value = zone.description || '';
-  document.getElementById('zone-form-color').value = zone.color || '#F59E0B';
-  document.getElementById('zone-form-color-hex').textContent = zone.color || '#F59E0B';
-
+  const title = document.getElementById('modal-zone-title');
+  const inputId = document.getElementById('zone-form-id');
+  const inputName = document.getElementById('zone-form-name');
+  const inputDesc = document.getElementById('zone-form-desc');
+  const inputColor = document.getElementById('zone-form-color');
+  const colorHex = document.getElementById('zone-form-color-hex');
   const modal = document.getElementById('modal-zone-form');
-  modal.classList.add('open');
+
+  if (title) title.textContent = `✏️ Editar Zona: ${zone.name}`;
+  if (inputId) inputId.value = zone.id;
+  if (inputName) inputName.value = zone.name;
+  if (inputDesc) inputDesc.value = zone.description || '';
+  if (inputColor) inputColor.value = zone.color || '#F59E0B';
+  if (colorHex) colorHex.textContent = zone.color || '#F59E0B';
+
+  if (modal) modal.classList.add('open');
 }
 
 async function handleSaveZoneForm(e) {
@@ -871,7 +944,8 @@ async function handleSaveZoneForm(e) {
 
   const id = document.getElementById('zone-form-id').value;
   const name = document.getElementById('zone-form-name').value.trim();
-  const description = document.getElementById('zone-form-desc').value.trim();
+  const descriptionInput = document.getElementById('zone-form-desc');
+  const description = descriptionInput ? descriptionInput.value.trim() : '';
   const color = document.getElementById('zone-form-color').value;
 
   if (!name) return;
@@ -904,6 +978,7 @@ async function handleSaveZoneForm(e) {
 
   closeModal('modal-zone-form');
   renderZonesAdmin();
+  renderBiggieStoresTable(document.getElementById('input-search-stores')?.value || '');
   renderEmployeesAdmin();
   renderEmployeesSummary();
 }
@@ -928,6 +1003,7 @@ async function deleteZone(zoneId) {
   }
 
   renderZonesAdmin();
+  renderBiggieStoresTable(document.getElementById('input-search-stores')?.value || '');
   renderEmployeesAdmin();
   renderEmployeesSummary();
 }
@@ -944,63 +1020,103 @@ function renderBiggieStoresTable(searchQuery = '') {
   container.innerHTML = '';
   const q = cleanStr(searchQuery);
 
-  const filtered = AppState.biggieStores.filter(s => {
+  // Obtener y filtrar sucursales
+  const filtered = (AppState.biggieStores || []).filter(s => {
     if (!q) return true;
-    return cleanStr(s.name).includes(q) || cleanStr(s.address).includes(q) || cleanStr(s.city).includes(q) || cleanStr(s.zone).includes(q);
+    return cleanStr(s.name).includes(q) || cleanStr(s.address || '').includes(q) || cleanStr(s.city || '').includes(q) || cleanStr(s.zone || '').includes(q);
   });
 
-  const zones = AppState.zones.length > 0 ? AppState.zones : STANDARD_ZONES;
+  // Usar zonas definidas o estándar
+  const zones = (AppState.zones && AppState.zones.length > 0) ? AppState.zones : (typeof STANDARD_ZONES !== 'undefined' ? STANDARD_ZONES : []);
 
+  // Si hay búsqueda pero sin resultados, mostrar mensaje
+  if (q && filtered.length === 0 && zones.length > 0) {
+    container.innerHTML = '<div style="color:var(--text-muted); padding:2rem; text-align:center;">No se encontraron sucursales que coincidan con la búsqueda.</div>';
+    return;
+  }
+
+  // Agrupar sucursales por zona
   zones.forEach(zone => {
-    const zoneStores = filtered.filter(s => normalizeStr(s.zone) === normalizeStr(zone.name));
-    if (zoneStores.length === 0 && q) return;
+    const zoneStores = filtered.filter(s => normalizeStr(s.zone || '').includes(normalizeStr(zone.name)));
+    
+    // Si hay búsqueda activa, solo mostrar zonas con resultados
+    if (q && zoneStores.length === 0) return;
 
     const zoneCard = document.createElement('div');
-    zoneCard.style.cssText = `background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem; display:flex; flex-direction:column; gap:0.5rem;`;
+    zoneCard.style.cssText = `background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:8px; padding:1rem; display:flex; flex-direction:column; gap:0.75rem;`;
 
-    zoneCard.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:0.5rem; margin-bottom:0.25rem;">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <span class="emp-color-bullet" style="background:${zone.color || '#FFB703'};"></span>
-          <strong style="font-size:1rem;">${zone.name}</strong>
-          <span class="zone-tag" style="font-size:0.68rem;">${zoneStores.length} Biggies</span>
-        </div>
-        <button class="btn btn-primary" onclick="openCreateStoreModal('${zone.name}')" style="padding:0.2rem 0.55rem; font-size:0.72rem;">
-          ➕ Agregar Biggie
-        </button>
-      </div>
-      <div id="zone-stores-list-${zone.id}" style="display:flex; flex-direction:column; gap:0.35rem;">
-        ${zoneStores.length === 0 ? '<span style="color:var(--text-muted); font-size:0.75rem; padding:0.5rem;">Sin sucursales en esta zona</span>' : ''}
-      </div>
-    `;
-
-    container.appendChild(zoneCard);
-
-    const listContainer = zoneCard.querySelector(`#zone-stores-list-${zone.id}`);
-    zoneStores.forEach(store => {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-radius:6px; padding:0.55rem 0.7rem; font-size:0.8rem;';
-      row.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:0.15rem; flex:1; overflow:hidden;">
-          <div style="display:flex; align-items:center; gap:0.4rem;">
-            <strong style="color:#FFF;">${store.name}</strong>
-            <code style="font-size:0.65rem; color:var(--text-muted); background:rgba(255,255,255,0.08); padding:0.1rem 0.3rem; border-radius:3px;">${store.id}</code>
+    const headerColor = zone.color || '#FFB703';
+    const zoneHeaderHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.75rem; margin-bottom:0.25rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem; flex:1;">
+          <span class="emp-color-bullet" style="background:${headerColor}; width:16px; height:16px;"></span>
+          <div style="flex:1;">
+            <strong style="font-size:1.05rem; color:#FFF;">${zone.name}</strong>
+            <span class="zone-tag" style="font-size:0.7rem; margin-left:0.5rem; background:rgba(255,255,255,0.1); color:var(--text-secondary);">📦 ${zoneStores.length} Biggie${zoneStores.length !== 1 ? 's' : ''}</span>
           </div>
-          <span style="color:var(--text-secondary); font-size:0.73rem;">📍 ${store.address || 'Sin dirección'} — ${store.city || ''}</span>
-          <span style="color:var(--text-muted); font-size:0.7rem;">🌍 ${store.lat.toFixed(4)}, ${store.lng.toFixed(4)} ${store.phone ? '📞 ' + store.phone : ''}</span>
         </div>
-        <div style="display:flex; gap:0.3rem; flex-shrink:0;">
-          <button class="btn btn-secondary" onclick="openEditStoreModal('${store.id}')" style="padding:0.2rem 0.45rem; font-size:0.72rem;" title="Modificar">
-            ✏️
+        <div style="display:flex; gap:0.35rem; flex-shrink:0;">
+          <button class="btn btn-primary" onclick="openCreateStoreModal('${zone.name}')" style="padding:0.3rem 0.6rem; font-size:0.75rem; white-space:nowrap;">
+            ➕ Agregar Biggie
           </button>
-          <button class="btn btn-secondary" onclick="deleteStore('${store.id}')" style="padding:0.2rem 0.45rem; font-size:0.72rem; color:#EF4444;" title="Eliminar">
+          <button class="btn btn-secondary" onclick="deleteZone('${zone.id}')" title="Eliminar Zona" style="padding:0.3rem 0.6rem; font-size:0.75rem; color:#EF4444; white-space:nowrap;">
             🗑️
           </button>
         </div>
-      `;
-      listContainer.appendChild(row);
-    });
+      </div>
+    `;
+    
+    zoneCard.innerHTML = zoneHeaderHtml;
+
+    const listContainer = document.createElement('div');
+    listContainer.style.cssText = 'display:flex; flex-direction:column; gap:0.5rem;';
+    listContainer.id = `zone-stores-list-${zone.id || zone.name}`;
+
+    if (zoneStores.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.style.cssText = 'color:var(--text-muted); font-size:0.8rem; padding:1rem; text-align:center; background:rgba(0,0,0,0.15); border-radius:6px;';
+      emptyMsg.textContent = '📭 Sin sucursales en esta zona. Agrega la primera.';
+      listContainer.appendChild(emptyMsg);
+    } else {
+      zoneStores.forEach(store => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; background:rgba(0,0,0,0.2); border-radius:6px; padding:0.7rem; font-size:0.8rem; border-left:3px solid ' + headerColor + ';';
+        
+        const storeInfoHtml = `
+          <div style="display:flex; flex-direction:column; gap:0.2rem; flex:1; overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <strong style="color:#FFF; font-size:0.9rem;">${store.name || 'Sin nombre'}</strong>
+              <code style="font-size:0.65rem; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:0.1rem 0.3rem; border-radius:3px;">${store.id || 'N/A'}</code>
+            </div>
+            <span style="color:var(--text-secondary); font-size:0.75rem;">📍 ${store.address || 'Sin dirección'} — ${store.city || 'Paraguay'}</span>
+            <span style="color:var(--text-muted); font-size:0.7rem;">
+              🌍 ${store.lat ? store.lat.toFixed(4) : 'N/A'}, ${store.lng ? store.lng.toFixed(4) : 'N/A'}
+              ${store.phone ? ' 📞 ' + store.phone : ''}
+            </span>
+          </div>
+          <div style="display:flex; gap:0.3rem; flex-shrink:0; margin-left:0.5rem;">
+            <button class="btn btn-secondary" onclick="openEditStoreModal('${store.id}')" style="padding:0.2rem 0.45rem; font-size:0.72rem;" title="Modificar Sucursal">
+              ✏️
+            </button>
+            <button class="btn btn-secondary" onclick="deleteStore('${store.id}')" style="padding:0.2rem 0.45rem; font-size:0.72rem; color:#EF4444;" title="Eliminar Sucursal">
+              🗑️
+            </button>
+          </div>
+        `;
+        
+        row.innerHTML = storeInfoHtml;
+        listContainer.appendChild(row);
+      });
+    }
+
+    zoneCard.appendChild(listContainer);
+    container.appendChild(zoneCard);
   });
+
+  // Si no hay zonas, mostrar mensaje
+  if (zones.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted); padding:2rem; text-align:center;"><p>No hay zonas definidas.</p><button class="btn btn-primary" onclick="openCreateZoneModal()" style="margin-top:1rem;">➕ Crear Primera Zona</button></div>';
+  }
 }
 
 // ==========================================================================
@@ -1024,11 +1140,6 @@ function openCreateStoreModal(preselectedZone = '') {
   document.getElementById('modal-store-title').textContent = '➕ Nueva Sucursal Biggie';
   document.getElementById('store-form-id').value = '';
   document.getElementById('store-form-name').value = '';
-  document.getElementById('store-form-address').value = '';
-  document.getElementById('store-form-city').value = '';
-  document.getElementById('store-form-lat').value = '';
-  document.getElementById('store-form-lng').value = '';
-  document.getElementById('store-form-phone').value = '';
 
   populateStoreZoneDropdown(preselectedZone);
 
@@ -1044,11 +1155,6 @@ function openEditStoreModal(storeId) {
   document.getElementById('modal-store-title').textContent = `✏️ Editar: ${store.name}`;
   document.getElementById('store-form-id').value = store.id;
   document.getElementById('store-form-name').value = store.name;
-  document.getElementById('store-form-address').value = store.address || '';
-  document.getElementById('store-form-city').value = store.city || '';
-  document.getElementById('store-form-lat').value = store.lat || '';
-  document.getElementById('store-form-lng').value = store.lng || '';
-  document.getElementById('store-form-phone').value = store.phone || '';
 
   populateStoreZoneDropdown(store.zone);
 
@@ -1062,15 +1168,20 @@ async function handleSaveStoreForm(e) {
   const id = document.getElementById('store-form-id').value;
   const name = document.getElementById('store-form-name').value.trim();
   const zone = document.getElementById('store-form-zone').value;
-  const address = document.getElementById('store-form-address').value.trim();
-  const city = document.getElementById('store-form-city').value.trim();
-  const phone = document.getElementById('store-form-phone').value.trim();
-  const lat = document.getElementById('store-form-lat').value;
-  const lng = document.getElementById('store-form-lng').value;
 
   if (!name || !zone) return;
 
-  const payload = { name, zone, address, city, phone, lat, lng };
+  // Conservar lat/lng/dirección existentes si se está editando
+  const existing = id ? AppState.biggieStores.find(s => s.id === id) : null;
+  const payload = {
+    name,
+    zone,
+    address: existing ? existing.address || '' : '',
+    city: existing ? existing.city || '' : '',
+    phone: existing ? existing.phone || '' : '',
+    lat: existing ? existing.lat : '',
+    lng: existing ? existing.lng : ''
+  };
 
   try {
     let res;
@@ -1129,9 +1240,16 @@ async function deleteStore(storeId) {
 }
 
 function initEventListeners() {
-  document.getElementById('btn-generate-routes').addEventListener('click', executeRouteOptimization);
+  const safeAddListener = (id, eventName, handler) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener(eventName, handler);
+    }
+  };
 
-  document.getElementById('btn-load-demo').addEventListener('click', () => {
+  safeAddListener('btn-generate-routes', 'click', executeRouteOptimization);
+
+  safeAddListener('btn-load-demo', 'click', () => {
     const demoSample = [
       { ...AppState.biggieStores[1], orderNumber: 'PED-DEMO-01', packages: 12 },
       { ...AppState.biggieStores[2], orderNumber: 'PED-DEMO-02', packages: 8 },
@@ -1150,34 +1268,42 @@ function initEventListeners() {
     setTimeout(() => executeRouteOptimization(), 300);
   });
 
-  document.getElementById('btn-download-template').addEventListener('click', () => {
+  safeAddListener('btn-download-template', 'click', () => {
     window.location.href = '/api/download-template';
   });
 
-  document.getElementById('btn-export-excel').addEventListener('click', exportRoutesToExcel);
+  safeAddListener('btn-export-excel', 'click', exportRoutesToExcel);
 
-  document.getElementById('btn-print-route').addEventListener('click', () => {
+  safeAddListener('btn-print-route', 'click', () => {
     window.print();
   });
 
-  document.getElementById('btn-fit-map').addEventListener('click', () => {
+  safeAddListener('btn-fit-map', 'click', () => {
     if (AppState.map) {
       AppState.map.setView([-25.2980, -57.5750], 12);
     }
   });
 
   // Empleados
-  document.getElementById('btn-add-employee').addEventListener('click', openCreateEmployeeModal);
-  document.getElementById('form-employee').addEventListener('submit', handleSaveEmployeeForm);
-  document.getElementById('emp-form-color').addEventListener('input', (e) => {
-    document.getElementById('emp-form-color-hex').textContent = e.target.value;
-  });
+  safeAddListener('btn-add-employee', 'click', openCreateEmployeeModal);
+  safeAddListener('form-employee', 'submit', handleSaveEmployeeForm);
+  const employeeColorInput = document.getElementById('emp-form-color');
+  if (employeeColorInput) {
+    employeeColorInput.addEventListener('input', (e) => {
+      const hex = document.getElementById('emp-form-color-hex');
+      if (hex) hex.textContent = e.target.value;
+    });
+  }
 
   // Zonas
-  document.getElementById('form-zone').addEventListener('submit', handleSaveZoneForm);
-  document.getElementById('zone-form-color').addEventListener('input', (e) => {
-    document.getElementById('zone-form-color-hex').textContent = e.target.value;
-  });
+  safeAddListener('form-zone', 'submit', handleSaveZoneForm);
+  const zoneColorInput = document.getElementById('zone-form-color');
+  if (zoneColorInput) {
+    zoneColorInput.addEventListener('input', (e) => {
+      const hex = document.getElementById('zone-form-color-hex');
+      if (hex) hex.textContent = e.target.value;
+    });
+  }
 
   document.getElementById('btn-quick-manage-zones').addEventListener('click', () => {
     const tabEmp = document.querySelector('[data-tab="tab-employees"]');

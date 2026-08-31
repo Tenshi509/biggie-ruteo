@@ -342,29 +342,54 @@ function cleanStr(s) {
     .trim();
 }
 
-function matchBiggieStore(nameQuery, addressQuery, cityQuery) {
+function matchBiggieStore(nameQuery, addressQuery, cityQuery, zoneQuery) {
   const qName = cleanStr(nameQuery);
   const qAddr = cleanStr(addressQuery);
   const qCity = cleanStr(cityQuery);
+  const qZone = cleanStr(zoneQuery);
 
   const stores = getStores();
 
+  // Prioridad 1: Búsqueda exacta o cercana por nombre
   for (const store of stores) {
     const sName = cleanStr(store.name);
     const sAddr = cleanStr(store.address);
+    const sCity = cleanStr(store.city);
+    const sZone = cleanStr(store.zone);
 
-    if (qName && (sName.includes(qName) || qName.includes(sName.replace('biggie ', '')))) {
-      return store;
+    // Búsqueda por nombre (incluyendo palabras parciales)
+    if (qName && qName.length > 2) {
+      if (sName.includes(qName) || qName.includes(sName.replace('biggie ', '').trim())) {
+        return store;
+      }
+      const storeKeywords = sName.replace('biggie', '').trim().split(/\s+/).filter(w => w.length > 2);
+      if (storeKeywords.some(kw => qName.includes(kw))) {
+        return store;
+      }
     }
-    if (qAddr && sAddr.includes(qAddr)) {
+    
+    if (qAddr && qAddr.length > 3 && sAddr.includes(qAddr)) {
       return store;
     }
   }
 
-  for (const store of stores) {
-    const sCity = cleanStr(store.city);
-    if (qCity && sCity.includes(qCity)) {
-      return store;
+  // Prioridad 2: Búsqueda por zona
+  if (qZone && qZone.length > 2) {
+    for (const store of stores) {
+      const sZone = cleanStr(store.zone);
+      if (sZone.includes(qZone) || qZone.includes(sZone)) {
+        return store;
+      }
+    }
+  }
+
+  // Prioridad 3: Búsqueda por ciudad
+  if (qCity && qCity.length > 2) {
+    for (const store of stores) {
+      const sCity = cleanStr(store.city);
+      if (sCity.includes(qCity)) {
+        return store;
+      }
     }
   }
 
@@ -391,7 +416,7 @@ app.post('/api/upload-excel', upload.single('excelFile'), (req, res) => {
 
     rawRows.forEach(row => {
       const idVal = row['ID'] || row['ID Sucursal'] || row['Id'] || row['id'] || ('STOP-' + idCounter);
-      const nameVal = row['Nombre'] || row['Nombre Sucursal'] || row['Sucursal'] || row['Destino'] || ('Sucursal Biggie ' + idCounter);
+      let nameVal = row['Nombre'] || row['Nombre Sucursal'] || row['Sucursal'] || row['Destino'] || ('Sucursal Biggie ' + idCounter);
       const addrVal = row['Direccion'] || row['Dirección'] || row['Ubicacion'] || '';
       const cityVal = row['Ciudad'] || row['Localidad'] || 'Asunción';
       let zoneVal = row['Zona'] || row['Sector'] || '';
@@ -403,14 +428,58 @@ app.post('/api/upload-excel', upload.single('excelFile'), (req, res) => {
       const phoneVal = row['Telefono'] || row['Teléfono'] || row['Telefono Contacto'] || '';
       const notesVal = row['Notas'] || row['Observaciones'] || '';
 
-      const matchedStore = matchBiggieStore(nameVal, addrVal, cityVal);
+      // Intentar matching progresivo
+      let matchedStore = matchBiggieStore(nameVal, addrVal, cityVal, zoneVal);
+      let hasValidStore = false;
+      
       if (matchedStore) {
+        nameVal = matchedStore.name;
+        hasValidStore = true;
         if (!latVal || !lngVal || isNaN(latVal) || isNaN(lngVal)) {
           latVal = matchedStore.lat;
           lngVal = matchedStore.lng;
         }
         if (!zoneVal) {
           zoneVal = matchedStore.zone;
+        }
+      } else {
+        // Si no hay match, buscar por zona
+        if (zoneVal) {
+          const stores = getStores();
+          const byZone = stores.filter(s => cleanStr(s.zone) === cleanStr(zoneVal));
+          if (byZone.length > 0) {
+            const usedNames = parsedStops.map(p => p.name);
+            const available = byZone.filter(s => !usedNames.includes(s.name));
+            if (available.length > 0) {
+              const selectedStore = available[0];
+              nameVal = selectedStore.name;
+              hasValidStore = true;
+              if (!latVal || !lngVal || isNaN(latVal) || isNaN(lngVal)) {
+                latVal = selectedStore.lat;
+                lngVal = selectedStore.lng;
+              }
+              zoneVal = selectedStore.zone;
+            }
+          }
+        }
+        
+        // Si aún no hay nombre válido de una sucursal real, buscar en cualquier zona disponible
+        if (!hasValidStore && nameVal.includes('Sucursal Biggie')) {
+          const stores = getStores();
+          if (stores.length > 0) {
+            const usedNames = parsedStops.map(p => p.name);
+            const available = stores.filter(s => !usedNames.includes(s.name));
+            if (available.length > 0) {
+              const selectedStore = available[0];
+              nameVal = selectedStore.name;
+              hasValidStore = true;
+              if (!latVal || !lngVal || isNaN(latVal) || isNaN(lngVal)) {
+                latVal = selectedStore.lat;
+                lngVal = selectedStore.lng;
+              }
+              zoneVal = selectedStore.zone;
+            }
+          }
         }
       }
 
@@ -420,7 +489,7 @@ app.post('/api/upload-excel', upload.single('excelFile'), (req, res) => {
       }
 
       if (!zoneVal) {
-        zoneVal = 'Asunción Centro';
+        zoneVal = 'Asunción';
       }
 
       parsedStops.push({
@@ -436,7 +505,7 @@ app.post('/api/upload-excel', upload.single('excelFile'), (req, res) => {
         priority: String(priorityVal),
         phone: String(phoneVal),
         notes: String(notesVal),
-        matchedWithDb: !!matchedStore
+        matchedWithDb: hasValidStore
       });
 
       idCounter++;

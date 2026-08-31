@@ -1,0 +1,35 @@
+==========================================================
+ BIGGIE PARAGUAY - SISTEMA DE RUTEO INTELLGENTE
+ INSTRUCCIONES DE INSTALACION EN OTRA PC
+==========================================================
+
+1) REQUISITO PREVIO
+   - Instalar Node.js (version 12 o superior) en la otra PC.
+   - Descargalo gratis de: https://nodejs.org
+   - Acepta todas las opciones por defecto al instalar.
+
+2) COPIAR ESTA CARPETA
+   - Copia la carpeta "biggie-ruteo-paraguay" completa a la otra PC.
+     (por ejemplo, en el Escritorio)
+
+3) INSTALAR LAS DEPENDENCIAS
+   - Abre una terminal (PowerShell o CMD) DENTRO de la carpeta
+     "biggie-ruteo-paraguay" y ejecuta:
+         npm install
+   - Espera a que termine (descarga express, cors, multer y xlsx).
+
+4) INICIAR LA APLICACION
+   - Doble clic en el archivo  iniciar_app.bat
+     (abre el servidor y la ventana de escritorio automaticamente).
+   - O manualmente:
+         node server.js
+     y abre en el navegador:  http://localhost:3456
+
+5) DATOS
+   - Todo lo que modifiques (empleados, zonas, biggies) se guarda en
+     la carpeta "data" del proyecto. Esos archivos viajan con la carpeta.
+
+NOTA
+   - El .bat abre la app como aplicacion de escritorio usando Edge o
+     Chrome (ya vienen instalados en Windows). No necesitas instalar mas nada.
+==========================================================

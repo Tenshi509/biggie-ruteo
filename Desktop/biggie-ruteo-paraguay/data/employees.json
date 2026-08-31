@@ -1,80 +1,71 @@
 [
   {
-    "id": "EMP-01",
-    "name": "Carlos Benítez",
-    "phone": "0981 445 120",
-    "assignedStores": [
-      "Biggie Palma",
-      "Biggie Estrella",
-      "Biggie Costanera",
-      "Biggie Villa Morra",
-      "Biggie Carmelitas"
-    ],
-    "assignedZones": [
-      "Palma Centro",
-      "Estrella",
-      "Costanera Norte",
-      "Villa Morra",
-      "Carmelitas"
-    ],
-    "color": "#EF4444",
-    "active": true
-  },
-  {
     "id": "EMP-02",
-    "name": "Rodrigo Gómez",
+    "name": "Marco Lugo",
     "phone": "0982 778 340",
-    "assignedStores": [
-      "Biggie Luque Centro",
-      "Biggie Luque Conmebol",
-      "Biggie Mariano Roque Alonso",
-      "Biggie Mariano Shopping"
-    ],
+    "assignedStores": [],
     "assignedZones": [
-      "Luque Centro",
-      "Luque Conmebol",
-      "Mariano Roque Alonso Transchaco",
-      "Mariano Shopping Km14"
+      "Villa Elisa"
     ],
-    "color": "#10B981",
+    "color": "#10b981",
     "active": true
   },
   {
     "id": "EMP-03",
-    "name": "Esteban Almada",
+    "name": "Alan Duarte",
     "phone": "0983 990 650",
-    "assignedStores": [
-      "Biggie San Lorenzo Centro",
-      "Biggie UNA",
-      "Biggie Capiatá Km 16",
-      "Biggie Fernando Norte"
-    ],
+    "assignedStores": [],
     "assignedZones": [
-      "San Lorenzo Centro",
-      "San Lorenzo UNA",
-      "Capiatá Km 16 Aratiri",
-      "Fernando de la Mora Norte"
+      "Asunción"
     ],
-    "color": "#3B82F6",
+    "color": "#3b82f6",
     "active": true
   },
   {
     "id": "EMP-04",
-    "name": "Hugo Fleitas",
+    "name": "Marikariel",
     "phone": "0985 332 110",
-    "assignedStores": [
-      "Biggie Lambaré",
-      "Biggie Paseo del Yacht",
-      "Biggie Villa Elisa",
-      "Biggie Ñemby"
-    ],
+    "assignedStores": [],
     "assignedZones": [
-      "Lambaré Cacique",
-      "Lambaré Yacht",
-      "Villa Elisa Centro",
-      "Ñemby Acceso Sur"
+      "Lambaré",
+      "Villa Elisa",
+      "Ñemby"
     ],
-    "color": "#EC4899",
+    "color": "#ec4899",
+    "active": true
+  },
+  {
+    "id": "EMP-4942",
+    "name": "Pablo Nuñez",
+    "phone": "",
+    "assignedZones": [
+      "Luque"
+    ],
+    "color": "#ec4899",
+    "active": true
+  },
+  {
+    "id": "EMP-3436",
+    "name": "Carlos Genes",
+    "phone": "",
+    "assignedZones": [
+      "San Lorenzo",
+      "Capiatá"
+    ],
+    "color": "#14b8a6",
+    "active": true
+  },
+  {
+    "id": "EMP-9465",
+    "name": "Agustin Pedreño",
+    "phone": "",
+    "assignedZones": [
+      "San Lorenzo",
+      "Capiatá",
+      "Fernando de la Mora",
+      "Ñemby"
+    ],
+    "color": "#ef4444",
     "active": true
   }
 ]
